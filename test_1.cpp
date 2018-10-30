@@ -1,6 +1,7 @@
 #include <Kokkos_Core.hpp>
 #include <hpx/hpx_start.hpp>
 #include <hpx/include/async.hpp>
+#include <hpx/include/apply.hpp>
 #include <hpx/include/iostreams.hpp>
 #include <hpx/parallel/executors/service_executors.hpp>
 
@@ -17,7 +18,7 @@ struct Work {
   };
 };
 
-int hpx_main(int argc, char *argv[]) {
+void work() {
   using namespace hpx::parallel;
   using hpx::threads::executors::service_executor_type;
   execution::service_executor exec(service_executor_type::main_thread);
@@ -38,14 +39,21 @@ int hpx_main(int argc, char *argv[]) {
   }
 
   hpx::wait_all(fs);
+}
 
+int hpx_main(int argc, char *argv[]) {
+  work();
   return hpx::finalize();
 }
 
 int main(int argc, char *argv[]) {
   Kokkos::initialize(argc, argv);
+#if defined(KOKKOS_ENABLE_HPX)
+  hpx::apply(work);
+#else
   hpx::start(argc, argv);
   hpx::stop();
+#endif
   Kokkos::finalize();
 
   return 0;
