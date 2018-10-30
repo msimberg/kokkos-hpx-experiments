@@ -24,6 +24,7 @@ int hpx_main(int argc, char *argv[]) {
 
     // Does this block? Yes, it calls ThreadsExec::fence() which calls a
     // spinwait (sleeps etc.).
+    // NOTE: Ok with HPX backend.
     Kokkos::parallel_for(a.size(), Work(a));
 
     Kokkos::deep_copy(h_a, a);

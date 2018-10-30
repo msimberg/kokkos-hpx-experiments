@@ -58,7 +58,7 @@ struct WorkReduce {
   };
 };
 
-int hpx_main(int argc, char *argv[]) {
+void work() {
   // Call Kokkos parallel for loops sequentially and synchronously.
   for (std::size_t i; i < 10; ++i) {
     auto a = hpx::Kokkos::make_view<double *>("A", 100);
@@ -145,16 +145,21 @@ int hpx_main(int argc, char *argv[]) {
 
   // HPX threads can still be used for asynchronously launching communication
   // threads.
+}
 
+int hpx_main(int argc, char *argv[]) {
+  work();
   return hpx::finalize();
 }
 
 int main(int argc, char *argv[]) {
   Kokkos::initialize(argc, argv);
   Kokkos::print_configuration(std::cout, true);
-
+#if defined(KOKKOS_ENABLE_HPX)
+  hpx::apply(work);
+#else
   hpx::init(argc, argv);
-
+#endif
   Kokkos::finalize();
 
   return 0;

@@ -21,7 +21,7 @@ struct Work {
   };
 };
 
-int hpx_main(int argc, char *argv[]) {
+void work() {
   using hpx::parallel::execution::par;
   using namespace hpx::parallel;
   using hpx::threads::executors::service_executor_type;
@@ -46,15 +46,22 @@ int hpx_main(int argc, char *argv[]) {
     hpx::cout << "h_a(9) = " << h_a(9) << "on thread "
               << hpx::get_worker_thread_num() << hpx::endl;
   });
+}
 
+int hpx_main(int argc, char *argv[]) {
+  work();
   return hpx::finalize();
 }
 
 int main(int argc, char *argv[]) {
   Kokkos::initialize(argc, argv);
   Kokkos::print_configuration(std::cout, true);
+#if defined(KOKKOS_ENABLE_HPX)
+  hpx::apply(work);
+#else
   hpx::start(argc, argv);
   hpx::stop();
+#endif
   Kokkos::finalize();
 
   return 0;

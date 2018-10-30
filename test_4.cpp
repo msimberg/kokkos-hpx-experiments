@@ -1,8 +1,8 @@
 #include <Kokkos_Core.hpp>
 #include <hpx/hpx_start.hpp>
+#include <hpx/include/async.hpp>
 #include <hpx/include/iostreams.hpp>
 #include <hpx/include/parallel_for_loop.hpp>
-#include <hpx/include/async.hpp>
 #include <hpx/parallel/executors/service_executors.hpp>
 
 #include <iostream>
@@ -22,7 +22,7 @@ struct Work {
   };
 };
 
-int hpx_main(int argc, char *argv[]) {
+void work() {
   using hpx::parallel::execution::par;
   using namespace hpx::parallel;
   using hpx::threads::executors::service_executor_type;
@@ -33,12 +33,11 @@ int hpx_main(int argc, char *argv[]) {
     auto h_a = Kokkos::create_mirror_view(a);
 
     execution::service_executor exec(service_executor_type::main_thread);
-    hpx::parallel::execution::sync_execute(
-        exec, [a]() {
-            hpx::cout << "Calling Kokkos::parallel_for" << hpx::endl;
-            Kokkos::parallel_for(a.size(), Work(a));
-            hpx::cout << "Done calling Kokkos::parallel_for" << hpx::endl;
-        });
+    hpx::parallel::execution::sync_execute(exec, [a]() {
+      hpx::cout << "Calling Kokkos::parallel_for" << hpx::endl;
+      Kokkos::parallel_for(a.size(), Work(a));
+      hpx::cout << "Done calling Kokkos::parallel_for" << hpx::endl;
+    });
 
     hpx::cout << "Calling Kokkos::deep_copy" << hpx::endl;
     Kokkos::deep_copy(h_a, a);
@@ -46,15 +45,22 @@ int hpx_main(int argc, char *argv[]) {
     hpx::cout << "h_a(9) = " << h_a(9) << "on thread "
               << hpx::get_worker_thread_num() << hpx::endl;
   });
+}
 
+int hpx_main(int argc, char *argv[]) {
+  work();
   return hpx::finalize();
 }
 
 int main(int argc, char *argv[]) {
   Kokkos::initialize(argc, argv);
   Kokkos::print_configuration(std::cout, true);
+#if defined(KOKKOS_ENABLE_HPX)
+  hpx::apply(work);
+#else
   hpx::start(argc, argv);
   hpx::stop();
+#endif
   Kokkos::finalize();
 
   return 0;

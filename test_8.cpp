@@ -106,22 +106,28 @@ template <class ExecSpace> struct TestWorkGraph {
   }
 };
 
-int hpx_main(int argc, char *argv[]) {
+void work() {
   int limit = 27;
   for (int i = 0; i < limit; ++i) {
     TestWorkGraph<Kokkos::DefaultExecutionSpace> f{i};
-    hpx::Kokkos::launch(&TestWorkGraph<Kokkos::DefaultExecutionSpace>::test_for, f);
+    hpx::Kokkos::launch(&TestWorkGraph<Kokkos::DefaultExecutionSpace>::test_for,
+                        f);
   }
+}
 
+int hpx_main(int argc, char *argv[]) {
+  work();
   return hpx::finalize();
 }
 
 int main(int argc, char *argv[]) {
   Kokkos::initialize(argc, argv);
   Kokkos::print_configuration(std::cout, true);
-
+#if defined(KOKKOS_ENABLE_HPX)
+  hpx::apply(work);
+#else
   hpx::init(argc, argv);
-
+#endif
   Kokkos::finalize();
 
   return 0;

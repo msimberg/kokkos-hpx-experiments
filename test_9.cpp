@@ -532,7 +532,7 @@ template <class Space> struct TestTaskSpawnWithPool {
   }
 };
 
-int hpx_main(int argc, char *argv[]) {
+void work() {
   const int N = 27;
   for (int i = 0; i < N; ++i) {
     hpx::Kokkos::launch(TestFib<Kokkos::DefaultExecutionSpace>::run, i,
@@ -548,16 +548,21 @@ int hpx_main(int argc, char *argv[]) {
 
   hpx::Kokkos::launch(
       TestTaskSpawnWithPool<Kokkos::DefaultExecutionSpace>::run);
+}
 
+int hpx_main(int argc, char *argv[]) {
+  work();
   return hpx::finalize();
 }
 
 int main(int argc, char *argv[]) {
   Kokkos::initialize(argc, argv);
   Kokkos::print_configuration(std::cout, true);
-
+#if defined(KOKKOS_ENABLE_HPX)
+  hpx::apply(work);
+#else
   hpx::init(argc, argv);
-
+#endif
   Kokkos::finalize();
 
   return 0;

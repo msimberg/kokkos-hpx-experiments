@@ -182,7 +182,5 @@ int main(int argc, char *argv[]) {
 
   Kokkos::finalize();
 
-  // hpx::init(argc, argv);
-
   return 0;
 }
