@@ -97,6 +97,39 @@ struct Work4 {
   };
 };
 
+struct WorkScratch {
+  using member_type = Kokkos::TeamPolicy<>::member_type;
+
+  KOKKOS_INLINE_FUNCTION void operator()(member_type thread) const {
+    printf("parallel_for(TeamPolicy(2, Kokkos::AUTO_t)): %d/%d %d/%d\n",
+           thread.league_rank(), thread.league_size(), thread.team_rank(),
+           thread.team_size());
+    printf("team_shmem() = %p\n", thread.team_shmem().get_shmem(4096));
+    printf("team_scratch(0) = %p\n", thread.team_scratch(0).get_shmem(0));
+    printf("thread_scratch(0) = %p\n",
+           thread.thread_scratch(0).get_shmem(1024));
+  };
+};
+
+struct WorkTeamBroadcast {
+  using member_type = Kokkos::TeamPolicy<>::member_type;
+
+  KOKKOS_INLINE_FUNCTION void operator()(member_type thread) const {
+    printf("parallel_for(TeamPolicy(2, Kokkos::AUTO_t)): %d/%d %d/%d\n",
+           thread.league_rank(), thread.league_size(), thread.team_rank(),
+           thread.team_size());
+
+    int value = thread.team_rank() * 5 * (thread.league_rank() + 1);
+    thread.team_broadcast(value, 3);
+    printf("team_broadcast: team_rank = %d, league_rank = %d, value = %d\n",
+           thread.team_rank(), thread.league_rank(), value);
+    value += thread.team_rank();
+    thread.team_broadcast([&](int &var) { var *= 2; }, value, 2);
+    printf("team_broadcast: team_rank = %d, league_rank = %d, value = %d\n",
+           thread.team_rank(), thread.league_rank(), value);
+  };
+};
+
 // This would be nice to have in HPX:
 // - executor to restrict execution to a single NUMA node
 // - executor to restrict execution to a single (arbitrary, scheduler can
@@ -134,6 +167,17 @@ int main(int argc, char *argv[]) {
   // Ranges are half-open (end not inclusive).
   Kokkos::parallel_for(
       Kokkos::MDRangePolicy<Kokkos::Rank<3>>({1, 3, 2}, {5, 6, 3}), Work4());
+  std::cout << std::endl;
+
+  Kokkos::parallel_for(
+      Kokkos::TeamPolicy<>(2, Kokkos::AUTO)
+          .set_scratch_size(0, Kokkos::PerTeam(4096), Kokkos::PerThread(1024)),
+      WorkScratch());
+  std::cout << std::endl;
+
+  Kokkos::parallel_for(
+      Kokkos::TeamPolicy<>(2, Kokkos::AUTO),
+      WorkTeamBroadcast());
   std::cout << std::endl;
 
   Kokkos::finalize();
